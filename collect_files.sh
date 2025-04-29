@@ -6,4 +6,4 @@ if [ $# -lt 2 ]; then
   exit 1
 fi
 
-./flatten.py "$@"
+collect_files.py "$@"
