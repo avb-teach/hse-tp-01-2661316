@@ -1,32 +1,53 @@
 #!/usr/bin/env python3
-import os
 import sys
+import os
+import shutil
 
-def collect_files(src_dir, dst_dir):
-    if not os.path.exists(dst_dir):
-        os.makedirs(dst_dir)
-    for name in os.listdir(src_dir):
-        path = os.path.join(src_dir, name)
-        if os.path.isfile(path):
-            copy_file(path, dst_dir)
-        elif os.path.isdir(path):
-            collect_files(path, dst_dir)
+def usage():
+    print(f"Использование: {sys.argv[0]} [--max_depth N] <input_dir> <output_dir>")
+    sys.exit(1)
 
-def copy_file(src_path, dst_dir):
-    fname = os.path.basename(src_path)
-    dst_path = os.path.join(dst_dir, fname)
-    with open(src_path, 'rb') as fin, open(dst_path, 'wb') as fout:
-        fout.write(fin.read())
+def collect_files(input_dir, output_dir, max_depth=None):
+    seen = {}
+    def helper(current, depth):
+        if max_depth is not None and depth > max_depth:
+            return
+        try:
+            entries = os.listdir(current)
+        except PermissionError:
+            return
+        for name in entries:
+            path = os.path.join(current, name)
+            if os.path.isdir(path):
+                helper(path, depth + 1)
+            else:
+                base, ext = os.path.splitext(name)
+                count = seen.get(name, 0)
+                seen[name] = count + 1
+                if count > 0:
+                    name_copy = f"{base}_{count}{ext}"
+                else:
+                    name_copy = name
+                shutil.copy2(path, os.path.join(output_dir, name_copy))
 
-def main():
-    if len(sys.argv) != 3:
-        print("Использование:\n  python collect_files.py <входная_папка> <выходная_папка>")
-        sys.exit(1)
-    src, dst = sys.argv[1], sys.argv[2]
-    if not os.path.isdir(src):
-        print(f"Ошибка: «{src}» не является директорией.")
-        sys.exit(1)
-    collect_files(src, dst)
+    os.makedirs(output_dir, exist_ok=True)
+    helper(input_dir, depth=1)
 
 if __name__ == "__main__":
-    main()
+    args = sys.argv[1:]
+    max_depth = None
+    if len(args) == 0:
+        usage()
+    if args[0] == "--max_depth":
+        if len(args) < 3:
+            usage()
+        try:
+            max_depth = int(args[1])
+        except ValueError:
+            print("Ошибка: N должно быть числом")
+            sys.exit(1)
+        args = args[2:]
+    if len(args) != 2:
+        usage()
+    inp, outp = args
+    collect_files(inp, outp, max_depth)
