@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+if [ $# -lt 2 ]; then
+  printf "Usage: %s INPUT_DIR OUTPUT_DIR [--max_depth N]\n" "$0" >&2
+  exit 1
+fi
+
 INPUT=$1
 OUTPUT=$2
 shift 2
